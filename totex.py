@@ -1,56 +1,51 @@
-def line_groups(txt):
-    lines = []
-    for l in txt.split("\n"):
-        l = l.rstrip()
-        if not l:
-            if lines:
-                yield lines
-                lines = []
-        else:
-            lines.append(l)
-            
-    if lines:
-        yield lines
+# parameter like filter, but instead of None, use bool
+# pred: funtion or `bool`
+def group(pred, itr):
+    group = []
+    for e in itr:
+        if pred(e):  group.append(e)
+        elif group:  yield group;    group = []
+    if group:  yield group
+
+# returns True, when s contains characters other than whitespace
+def nonspace(s : str):
+    return bool(s.strip())
+
+# transposes an array of strings
+# str_lst: list of strings, they should all have the same length
+def transpose_str(str_lst):
+    return map("".join, zip(*str_lst))
+
+# split a string into lines and group them into arrays of lines
+def split_line_groups(txt):
+    return group(nonspace, txt.split("\n"))
+
+# splits lines into blocks horizontally
+# lines should have all the same length and should contain elements
+def col_groups(lines):
+    return map(transpose_str, group(nonspace, transpose_str(lines)))
+
+
 
 # adds spaces to the end of each line, so that all lines have the same length
 def str_rect_space(lines):
     cols = max(map(len, lines))
-    return list(map(("{:%i}"%cols).format, lines))
+    return map(("{:%i}"%cols).format, lines)
 
-### lines should have all the same length
-##def str_empty_cols(lines):
-##    zipped = zip(*str_rect_space(lines))
-##    for i, col in enumerate(zipped):
-##        if not "".join(col).strip(): yield i
-    
-# splits lines into blocks horizontally
-# lines should have all the same length and should contain elements
-def str_split_rects(lines):
-    #if len(lines) == 1: return [[l] for l in lines[0].split()]
-    cols = [""]*len(lines)
-    # scan from left to right over the whole column at once
-    for col in zip(*lines):
-        if not "".join(col).strip():
-            # Column consists of spaces
-            if cols[0]:
-                yield cols
-                cols = [""]*len(lines)
-        else:
-            cols = [a + b for a, b in zip(cols, col)]
-            
-    if cols[0]:
-        yield cols
+# removes lines only consisting of spaces
+def rm_space(lines):
+    return filter(nonspace, lines)
 
-def str_rm_empty_lines(lines):
-    return list(filter(lambda l: bool(l.strip()), lines))
+
 
 # lines should have all the same length
 # all columns should contain a space anywhere
 # all rows    should contain a space anywhere
 def totex_block(lines):
+    lines = list(lines)
     if len(lines) == 1: return lines[0]
 
-    columns = list(map("".join, zip(*lines)))
+    columns = list(transpose_str(lines))
     width = len(columns)
 
     char = columns[0].strip()
@@ -67,22 +62,16 @@ def totex_block(lines):
         
 
 def totex_line(lines):
-    ret = ""
-
     # split the blocks into parts, separated by whole colums consisting
     # of spaces
-    for block in str_split_rects(str_rect_space(lines)):
-        ret += totex_block(str_rm_empty_lines(block)) + " "
-
-    return ret[:-1]
+    return " ".join(
+        totex_block(rm_space(block))
+        for block in col_groups(str_rect_space(lines))
+    )
             
 
 def totex(txt):
-    #return r"$f(x) = \frac{5x - 3}{7x}$"
-    ret = ""
-    
-    for lg in line_groups(txt):
-        ret += "$%s$\\\\\n\n" % totex_line(lg)
-        
-    return ret
-        
+    return "\n\n".join(
+        "$%s$\\\\" % totex_line(lg)
+        for lg in split_line_groups(txt)
+    ) + "\n" # Newline at end of file
