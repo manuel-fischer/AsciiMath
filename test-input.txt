@@ -5,10 +5,37 @@ f(x) = --------
 
 
 
-           x^2
+             2
+           x
           -----
             x
 g(x) = -----------
-         x^3 - x
+           3
+         x  -  x
         ---------
             x
+
+
+        2
+h(x) = x
+
+
+
+                                                  2
+                             2            x  -\tau
+\operatorname{erf}(x) = ------------ \int   e      \ d\tau
+                         \sqrt{\pi}       0
+
+
+
+
+     \infty
+\int        f(x)\ dx = 1
+    -\infty
+
+
+\text{Be careful:}
+
+    b                 a                     a
+\int f(x)\ dx  =  \int -f(x)\ dx  \neq  \int-f(x)\ dx
+    a                 b                     b
