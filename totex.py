@@ -13,10 +13,9 @@ def nonspace(s : str):
     return bool(s.strip())
 
 
-# transposes an array of strings
-# str_lst: list of strings, they should all have the same length
-def transpose_str(str_lst):
-    return map("".join, zip(*str_lst))
+# lines should have all the same length
+def get_column(lines, index):
+    return "".join(l[index] for l in lines)
 
 
 # split a string into lines and group them into arrays of lines
@@ -48,49 +47,48 @@ def str_rect_strip(lines):
 
 
 # yields tuples of 2 elements
-# first,  the element in grouping or None
-# second, the slice, in
+# first,  the element in grouping or False
+# second, the slice, into the string s
 def slices_group_by_chars(s, grouping):
     width = len(s)
     epos = 0
     non_beg = 0
     while epos != width:
-        for i, g in enumerate(grouping):
+        for g in grouping:
             npos = str_find_first_not(s[epos:], g)
             if npos != 0:
-                if non_beg != epos: yield (None, slice(non_beg, epos))
-                yield ((i, g), slice(epos, epos+npos))
+                if non_beg != epos: yield (False, slice(non_beg, epos))
+                yield (g, slice(epos, epos+npos))
                 epos += npos
                 non_beg = epos
                 break
         else:
             epos += 1
 
-    if non_beg != epos: yield (None, slice(non_beg, epos))
+    if non_beg != epos: yield (False, slice(non_beg, epos))
 
 
-### lines should have all the same length
-### all columns should contain a space anywhere
-### all rows    should contain a space anywhere
-def totex_block(lines):
-    ret = ""
+def get_main_row(lines):
+    column_0 = get_column(lines, 0)
 
-    lines = list(lines)
-    if len(lines) == 1: return lines[0]
-
-    columns = list(transpose_str(lines))
-    width = len(columns)
-
-    if width == 0: return ""
-
-    occupied = len(columns[0].strip())
-    if occupied != 1: raise Exception("Ambiguous, multiple things in first column")
+    if len(column_0.strip()) != 1:
+        raise Exception("Ambiguous, multiple things in first column")
     # TODO check here for large brackets, etc...
 
-    main_row = str_find_first_not(columns[0], None)
+    return str_find_first_not(column_0, None)
 
 
-    # parse single line text until space
+# lines should have all the same length
+# all columns should contain a space anywhere
+# all rows    should contain a space anywhere
+def totex_block(lines):
+    lines = list(lines)
+    if len(lines) == 0 or len(lines[0]) == 0: return ""
+    if len(lines) == 1: return lines[0]
+    
+    ret = ""
+
+    main_row = get_main_row(lines)
 
     for group, slc in slices_group_by_chars(lines[main_row], ["-", None]):
         g_lines = [l[slc] for l in lines]
@@ -98,13 +96,12 @@ def totex_block(lines):
         btm = list(str_rect_strip(g_lines[main_row+1:]))
         if not top and not btm:
             ret += g_lines[main_row]
-        elif group != None:
-            i, g = group
+        elif group != False:
             topx = totex_block(top)
             btmx = totex_block(btm)
-            if g == "-":
+            if group == "-":
                 ret += r"\frac{%s}{%s}" % (topx, btmx)
-            elif g == None: # spaces
+            elif group == None: # spaces
                 # super/subscript
                 if topx:  ret += "^{%s}" % topx
                 if btmx:  ret += "_{%s}" % btmx
@@ -114,7 +111,7 @@ def totex_block(lines):
     return ret
 
 
-### lines should have all the same length
+# lines should have all the same length
 def totex_line(lines):
     return totex_block(str_rect_strip(str_rect_space(lines)))
 
